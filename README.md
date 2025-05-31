@@ -25,7 +25,7 @@ A clinical decision support system for mental health professionals to assess sui
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/Gio99c/mental-health-counselor.git
 cd mental-health-counselor
 ```
 
@@ -84,8 +84,3 @@ The similar cases feature uses a dataset of 500 Reddit posts labeled by experts:
 - **Database**: MongoDB
 - **Data Models**: Pydantic
 - **Workflow**: LangGraph
-
-## Important Notice
-
-This tool is designed to assist mental health professionals and should not replace clinical judgment or established safety protocols. Always follow your institution's suicide risk assessment procedures and emergency protocols.
-
