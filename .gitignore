@@ -3,3 +3,6 @@
 __pycache__/
 *.csv
 *.json
+*.pkl
+reddit_embeddings.pkl
+reddit_posts.pkl

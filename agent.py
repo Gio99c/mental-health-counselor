@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from models import PatientInfo
 from prompts import PATIENT_INFO_EXTRACTION_PROMPT, SEVERITY_ASSESSMENT_PROMPT, CLINICAL_ADVICE_PROMPT
+from rag_system import RedditRAG, format_similar_posts_for_display
 
 
 class CounselorAgent:
@@ -27,6 +28,13 @@ class CounselorAgent:
             parser=self.patient_parser,
         )
         self.graph = self._build_graph()
+        
+        # Initialize RAG system
+        try:
+            self.rag_system = RedditRAG()
+        except Exception as e:
+            print(f"Warning: RAG system initialization failed: {e}")
+            self.rag_system = None
     
     def _build_graph(self) -> StateGraph:
         """Build the LangGraph workflow."""
@@ -153,6 +161,18 @@ class CounselorAgent:
         else:
             return "Severe risk"
     
+    def _get_similar_cases(self, input_text: str) -> str:
+        """Get similar cases from Reddit database."""
+        if self.rag_system is None:
+            return "\n## 📚 Similar Cases\n*RAG system not available*\n"
+        
+        try:
+            similar_posts = self.rag_system.find_similar_posts(input_text, top_k=3)
+            return "\n" + format_similar_posts_for_display(similar_posts)
+        except Exception as e:
+            print(f"Error retrieving similar cases: {e}")
+            return "\n## 📚 Similar Cases\n*Error retrieving similar cases*\n"
+    
     def extract_patient_info_only(self, input_text: str) -> PatientInfo:
         """Extract only patient information for UI display."""
         prompt = PromptTemplate(
@@ -235,6 +255,9 @@ class CounselorAgent:
         
         response = advice_llm.invoke(messages)
         
+        # Get similar cases
+        similar_cases = self._get_similar_cases(input_text)
+        
         return f"""
 ## CSSRS Assessment Result
 **Score: {severity_score}/10** - *{severity_level}*
@@ -251,6 +274,8 @@ class CounselorAgent:
 
 ## Clinical Guidance
 {response.content}
+
+{similar_cases}
 """
     
     def process_input(self, input_text: str) -> str:
@@ -276,6 +301,9 @@ class CounselorAgent:
             mood_symptoms_str = ", ".join([symptom.value for symptom in patient_info.mood_symptoms]) if patient_info.mood_symptoms else "None identified"
             energy_level_str = patient_info.energy_level.value.title()
             
+            # Get similar cases
+            similar_cases = self._get_similar_cases(input_text)
+            
             return f"""
 ## CSSRS Assessment Result
 **Score: {phq8_score}/10** - *{severity}*
@@ -292,6 +320,8 @@ class CounselorAgent:
 
 ## Clinical Guidance
 {advice}
+
+{similar_cases}
 """
             
         except Exception as e:

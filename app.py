@@ -4,6 +4,8 @@ import uuid
 from agent import CounselorAgent
 from models import Conversation, PatientInfo
 from database import Database
+from dotenv import load_dotenv
+load_dotenv()
 
 st.set_page_config(
     page_title="Suicide Severity Assessment Assistant", 
@@ -249,6 +251,22 @@ def main():
                 <div><strong>4-5:</strong> Moderate risk</div>
                 <div><strong>6-7:</strong> High risk</div>
                 <div><strong>8-10:</strong> Severe risk</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div style="background: #e8f4fd; padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #17a2b8;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #0c5460;">📚 Similar Cases</h4>
+            <div style="font-size: 0.85rem; color: #0c5460;">
+                Each assessment includes 3 similar cases from a database of 500 Reddit posts with expert labels:
+                <div style="margin-top: 0.5rem;">
+                    <div>🟢 <strong>Supportive</strong> - Low/no risk</div>
+                    <div>🟡 <strong>Indicator</strong> - Warning signs</div>
+                    <div>🟠 <strong>Ideation</strong> - Suicidal thoughts</div>
+                    <div>🔴 <strong>Behavior</strong> - Concerning actions</div>
+                    <div>🚨 <strong>Attempt</strong> - Suicide attempts</div>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)

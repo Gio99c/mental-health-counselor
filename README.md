@@ -8,6 +8,8 @@ A clinical decision support system for mental health professionals to assess sui
 - **Intelligent Information Extraction**: Automated parsing of clinical notes
 - **Real-time Risk Scoring**: Immediate assessment feedback
 - **Clinical Guidance**: Evidence-based intervention recommendations
+- **Similar Case Retrieval**: RAG system showing 3 most similar cases from 500 Reddit posts
+- **Expert-labeled Database**: Cases classified by mental health professionals
 - **Secure Data Storage**: MongoDB-based conversation persistence
 - **Professional Interface**: Healthcare-focused UI design
 
@@ -45,12 +47,15 @@ export MONGODB_COLLECTION="conversations"
 streamlit run app.py
 ```
 
+*Note: On first run, the system will create embeddings for the Reddit dataset (500 posts). This process takes a few minutes but only runs once.*
+
 ## Usage
 
 1. Describe patient's suicidal thoughts, behaviors, and risk factors
 2. Review extracted risk indicators
 3. Analyze the CSSRS severity score (0-10)
-4. Follow the provided clinical guidance
+4. Review similar cases from the expert-labeled database
+5. Follow the provided clinical guidance
 
 ## Risk Scale
 
@@ -60,11 +65,27 @@ streamlit run app.py
 - **6-7**: High risk
 - **8-10**: Severe risk
 
+## Database Labels
+
+The similar cases feature uses a dataset of 500 Reddit posts labeled by experts:
+
+- 🟢 **Supportive**: Encouraging, no risk indicators
+- 🟡 **Indicator**: Warning signs or risk factors present
+- 🟠 **Ideation**: Active suicidal thoughts expressed
+- 🔴 **Behavior**: Concerning behaviors or planning
+- 🚨 **Attempt**: Previous or current suicide attempts
+
 ## Technology Stack
 
 - **Frontend**: Streamlit
 - **AI/ML**: LangChain, OpenAI GPT-4
+- **Embeddings**: Sentence Transformers
+- **Vector Search**: Cosine Similarity
 - **Database**: MongoDB
 - **Data Models**: Pydantic
 - **Workflow**: LangGraph
+
+## Important Notice
+
+This tool is designed to assist mental health professionals and should not replace clinical judgment or established safety protocols. Always follow your institution's suicide risk assessment procedures and emergency protocols.
 
