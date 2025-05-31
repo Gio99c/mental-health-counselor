@@ -225,6 +225,34 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
+        # Instructions
+        st.markdown("""
+        <div style="background: #f8f9fa; padding: 0.7rem; border-radius: 6px; margin: 0.7rem 0; border-left: 3px solid #007bff;">
+            <h4 style="margin: 0 0 0.3rem 0; color: #007bff; font-size: 0.95rem;">📋 How to Use</h4>
+            <ol style="margin: 0; padding-left: 1rem; font-size: 0.8rem; color: #333; line-height: 1.3;">
+                <li style="color: #333; margin-bottom: 0.2rem;">Describe patient's suicidal thoughts, behaviors, and risk factors</li>
+                <li style="color: #333; margin-bottom: 0.2rem;">Include relevant clinical observations</li>
+                <li style="color: #333; margin-bottom: 0.2rem;">Review the extracted risk factors</li>
+                <li style="color: #333; margin-bottom: 0.2rem;">Analyze the CSSRS severity score (0-10)</li>
+                <li style="color: #333;">Follow the clinical guidance provided</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # CSSRS Scale Reference
+        st.markdown("""
+        <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #ffc107;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #856404;">📊 CSSRS Scale</h4>
+            <div style="font-size: 0.85rem; color: #856404;">
+                <div><strong>0-1:</strong> Minimal risk</div>
+                <div><strong>2-3:</strong> Low risk</div>
+                <div><strong>4-5:</strong> Moderate risk</div>
+                <div><strong>6-7:</strong> High risk</div>
+                <div><strong>8-10:</strong> Severe risk</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         # Show conversation stats or empty state
         if conversation.messages:
             st.markdown(f"""
@@ -250,13 +278,6 @@ def main():
             </div>
             """, unsafe_allow_html=True)
         
-        # Storage status
-        mongodb_status = "🟢 MongoDB Connected" if st.session_state.db.conversations is not None else "🔴 MongoDB Disconnected"
-        st.markdown(f"""
-        <div class="db-status">
-            <small>{mongodb_status}</small>
-        </div>
-        """, unsafe_allow_html=True)
     
     # Main content
     st.markdown("""

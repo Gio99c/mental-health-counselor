@@ -8,8 +8,7 @@ from langchain.prompts import PromptTemplate
 from pydantic import ValidationError
 
 from models import PatientInfo
-from ml_model import SuicideSeverityPredictor
-from prompts import PATIENT_INFO_EXTRACTION_PROMPT, CLINICAL_ADVICE_PROMPT
+from prompts import PATIENT_INFO_EXTRACTION_PROMPT, SEVERITY_ASSESSMENT_PROMPT, CLINICAL_ADVICE_PROMPT
 
 
 class CounselorAgent:
@@ -22,7 +21,6 @@ class CounselorAgent:
             seed=42
         ).bind(response_format={"type": "json_object"})
         
-        self.ml_model = SuicideSeverityPredictor()
         self.patient_parser = PydanticOutputParser(pydantic_object=PatientInfo)
         self.fixing_parser = OutputFixingParser.from_llm(
             llm=self.llm,
@@ -35,11 +33,11 @@ class CounselorAgent:
         workflow = StateGraph(dict)
         
         workflow.add_node("extract_info", self._extract_patient_info)
-        workflow.add_node("predict_phq8", self._predict_phq8)
+        workflow.add_node("assess_severity", self._assess_severity)
         workflow.add_node("generate_advice", self._generate_advice)
         
-        workflow.add_edge("extract_info", "predict_phq8")
-        workflow.add_edge("predict_phq8", "generate_advice")
+        workflow.add_edge("extract_info", "assess_severity")
+        workflow.add_edge("assess_severity", "generate_advice")
         workflow.add_edge("generate_advice", END)
         
         workflow.set_entry_point("extract_info")
@@ -70,12 +68,40 @@ class CounselorAgent:
         
         return state
     
-    def _predict_phq8(self, state: Dict) -> Dict:
-        """Predict suicide severity score using ML model."""
+    def _assess_severity(self, state: Dict) -> Dict:
+        """Assess suicide severity using LLM."""
         patient_info = state["patient_info"]
-        original_input = state["input_text"]
-        severity_score = self.ml_model.predict(patient_info, original_input)
-        state["phq8_score"] = severity_score
+        
+        # Format patient info for prompt
+        mood_symptoms_str = ", ".join([symptom.value for symptom in patient_info.mood_symptoms]) if patient_info.mood_symptoms else "None"
+        energy_level_str = patient_info.energy_level.value.title()
+        
+        prompt = SEVERITY_ASSESSMENT_PROMPT.format(
+            age=patient_info.age or "Not specified",
+            sleep_issues="Yes" if patient_info.sleep_issues else "No",
+            appetite_changes="Yes" if patient_info.appetite_changes else "No",
+            energy_level=energy_level_str,
+            mood_symptoms=mood_symptoms_str,
+            social_withdrawal="Yes" if patient_info.social_withdrawal else "No",
+            concentration_issues="Yes" if patient_info.concentration_issues else "No",
+            hopelessness="Yes" if patient_info.hopelessness else "No",
+            original_input=state["input_text"]
+        )
+        
+        messages = [
+            SystemMessage(content="You are a clinical suicide risk assessment expert. Return only valid JSON."),
+            HumanMessage(content=prompt)
+        ]
+        
+        try:
+            response = self.llm.invoke(messages)
+            result = json.loads(response.content)
+            severity_score = result.get("severity_score", 0)
+            state["phq8_score"] = severity_score
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Severity assessment error: {e}")
+            state["phq8_score"] = 0
+        
         return state
     
     def _generate_advice(self, state: Dict) -> Dict:
@@ -151,8 +177,34 @@ class CounselorAgent:
     
     def process_with_patient_info(self, input_text: str, patient_info: PatientInfo) -> str:
         """Process input with pre-extracted patient info."""
-        # Predict suicide severity score
-        severity_score = self.ml_model.predict(patient_info, input_text)
+        # Assess severity using LLM
+        mood_symptoms_str = ", ".join([symptom.value for symptom in patient_info.mood_symptoms]) if patient_info.mood_symptoms else "None"
+        energy_level_str = patient_info.energy_level.value.title()
+        
+        prompt = SEVERITY_ASSESSMENT_PROMPT.format(
+            age=patient_info.age or "Not specified",
+            sleep_issues="Yes" if patient_info.sleep_issues else "No",
+            appetite_changes="Yes" if patient_info.appetite_changes else "No",
+            energy_level=energy_level_str,
+            mood_symptoms=mood_symptoms_str,
+            social_withdrawal="Yes" if patient_info.social_withdrawal else "No",
+            concentration_issues="Yes" if patient_info.concentration_issues else "No",
+            hopelessness="Yes" if patient_info.hopelessness else "No",
+            original_input=input_text
+        )
+        
+        messages = [
+            SystemMessage(content="You are a clinical suicide risk assessment expert. Return only valid JSON."),
+            HumanMessage(content=prompt)
+        ]
+        
+        try:
+            response = self.llm.invoke(messages)
+            result = json.loads(response.content)
+            severity_score = result.get("severity_score", 0)
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Severity assessment error: {e}")
+            severity_score = 0
         
         # Generate advice
         severity_level = self._get_severity_level(severity_score)
@@ -161,7 +213,7 @@ class CounselorAgent:
         mood_symptoms_str = ", ".join([symptom.value for symptom in patient_info.mood_symptoms]) if patient_info.mood_symptoms else "None identified"
         energy_level_str = patient_info.energy_level.value.title()
         
-        prompt = CLINICAL_ADVICE_PROMPT.format(
+        advice_prompt = CLINICAL_ADVICE_PROMPT.format(
             phq8_score=severity_score,
             severity_level=severity_level,
             age=patient_info.age or "Not specified",
@@ -178,7 +230,7 @@ class CounselorAgent:
         advice_llm = ChatOpenAI(model="gpt-4o", temperature=0.3)
         messages = [
             SystemMessage(content="You are an expert mental health counselor providing colleague guidance."),
-            HumanMessage(content=prompt)
+            HumanMessage(content=advice_prompt)
         ]
         
         response = advice_llm.invoke(messages)
