@@ -1,7 +1,6 @@
 .venv
 .env
 __pycache__/
-*.csv
 *.json
 *.pkl
 reddit_embeddings.pkl
