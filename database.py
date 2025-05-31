@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from models import Conversation, ChatMessage, PatientInfo
 
 class Database:
-    """Simple global conversation database using MongoDB."""
+    """MongoDB storage for mental health conversation data."""
     
     def __init__(self,):
         try:
@@ -17,12 +17,8 @@ class Database:
             self.client = MongoClient(MONGODB_URI)
             self.db = self.client[MONGODB_DATABASE]
             self.conversations = self.db[MONGODB_COLLECTION]
-            # Test connection
             self.client.admin.command('ping')
-            print(f"✅ Connected to MongoDB: {MONGODB_DATABASE}.{MONGODB_COLLECTION}")
-        except Exception as e:
-            print(f"❌ MongoDB connection failed: {e}")
-            # Fallback to None - will be handled in methods
+        except Exception:
             self.client = None
             self.db = None
             self.conversations = None
@@ -30,13 +26,11 @@ class Database:
     def save_conversation(self, conversation: Conversation) -> bool:
         """Save conversation to MongoDB."""
         if self.conversations is None:
-            print("❌ MongoDB not available")
             return False
             
         try:
-            # Convert to serializable format
             data = {
-                "_id": "global_conversation",  # Single global conversation
+                "_id": "global_conversation",
                 "id": conversation.id,
                 "title": conversation.title,
                 "created_at": conversation.created_at,
@@ -46,7 +40,6 @@ class Database:
                 "messages": []
             }
             
-            # Serialize messages
             for msg in conversation.messages:
                 msg_data = {
                     "role": msg.role,
@@ -54,7 +47,6 @@ class Database:
                 }
                 
                 if msg.role == "patient_info" and isinstance(msg.content, PatientInfo):
-                    # Store as dict for MongoDB
                     msg_data["content"] = json.loads(msg.content.model_dump_json())
                     msg_data["content_type"] = "patient_info"
                 else:
@@ -63,7 +55,6 @@ class Database:
                 
                 data["messages"].append(msg_data)
             
-            # Use upsert to replace the global conversation
             self.conversations.replace_one(
                 {"_id": "global_conversation"}, 
                 data, 
@@ -72,14 +63,12 @@ class Database:
             
             return True
             
-        except Exception as e:
-            print(f"Error saving conversation: {e}")
+        except Exception:
             return False
     
     def load_conversation(self) -> Optional[Conversation]:
         """Load conversation from MongoDB."""
         if self.conversations is None:
-            print("❌ MongoDB not available")
             return None
             
         try:
@@ -87,17 +76,14 @@ class Database:
             if not data:
                 return None
             
-            # Reconstruct messages
             messages = []
             for msg_data in data.get("messages", []):
                 content = msg_data["content"]
                 
-                # Reconstruct PatientInfo if needed
                 if msg_data.get("content_type") == "patient_info":
                     try:
                         content = PatientInfo(**content)
-                    except Exception as e:
-                        print(f"Error reconstructing PatientInfo: {e}")
+                    except Exception:
                         content = str(content)
                 
                 message = ChatMessage(
@@ -107,7 +93,6 @@ class Database:
                 )
                 messages.append(message)
             
-            # Create conversation
             conversation = Conversation(
                 id=data.get("id"),
                 session_id="global",
@@ -121,6 +106,5 @@ class Database:
             
             return conversation
             
-        except Exception as e:
-            print(f"Error loading conversation: {e}")
+        except Exception:
             return None 
